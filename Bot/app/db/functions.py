@@ -9,13 +9,12 @@ def create_tables_if_not_exists():
         cur = conn.cursor()
         cur.execute(
             f'''
-            CREATE TABLE IF NOT EXISTS passenger_flow (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            station varchar({name_max_length}) NOT NULL, 
-            line_number integer NOT NULL,
-            line_name varchar({name_max_length}) NOT NULL,
-            dt timestamp NOT NULL,
-            passenger_cnt integer NOT NULL);
+            CREATE TABLE IF NOT EXISTS giga_chad_match (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version integer NOT NULL,
+            id_vacancy INTEGER NOT NULL,
+            id_course INTEGER NOT NULL,
+            score timestamp NOT NULL);
             --FOREIGN KEY (chat_conditional_branch_id)  REFERENCES ChatConditionalBranches (id) ON DELETE SET NULL);
             '''
         )
@@ -100,19 +99,24 @@ async def save_message_to_db(user_tg_id,
             conn.close()
             print('Соединение с SQLite закрыто')
 
-async def get_passenger_flow_from_db(station, line_name, dt):
-    print('TEST!!!')
+async def get_scores_from_db(id_vacancy):
+    print(f'get_passenger_flow_from_db. id_vacancy: {id_vacancy}')
     result = None
     try:
         conn = sqlite3.connect(db_name)
         cur = conn.cursor()
         res = cur.execute(
             f'''
-            SELECT line_name, passenger_cnt FROM passenger_flow
-            WHERE LOWER(station)=LOWER('{station}') 
-            -- AND LOWER(line_name)=LOWER('{line_name}')
-            AND DATE(dt)='{dt}'
-            ORDER BY id DESC
+            SELECT id_course, score FROM giga_chad_match
+            WHERE 1=1
+                AND id_vacancy='{id_vacancy}'
+            
+            CREATE TABLE IF NOT EXISTS giga_chad_match (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version integer NOT NULL,
+            id_vacancy INTEGER NOT NULL,
+            id_course INTEGER NOT NULL,
+            score timestamp NOT NULL);
             '''
         )
         print(dt)
