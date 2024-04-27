@@ -123,13 +123,13 @@ def parse_vacancy_page(url):
         if not keywords:
             keywords = ['Не указано']
         save_to_database(info, description, experience, skills, main, url, keywords)
+        return [info, description, experience, skills, main, url, keywords]
+
     else:
         return f"Ошибка при загрузке страницы: {response.status_code}"
 
-#url = 'https://hh.ru/vacancy/94780591'
-data = pd.read_excel('train_GB_PodborKursov.xlsx', names=['Name', 'Url', 'list'])
-list_col = data['list'].dropna()
-urls = list_col.values[1:]
-for url in urls:
-    parse_vacancy_page(url)
+url = '' # сюда будет ссылка из бота закладываться
+new_page = parse_vacancy_page(url)  # после этой строчки, новая вакансия 
+                                    # закладывается в БД, а в эту переменную закладываются столбцы для новой вакансии
+                                    # эту переменную используем для мэтча с курсами из другой БД
 delete_url_duplets()
