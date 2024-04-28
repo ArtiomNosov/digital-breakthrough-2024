@@ -50,7 +50,7 @@ def get_answer(prompt):
     return answer.json()['choices'][0]['message']['content']
 
 async def insert_socre_description(description):
-    i = await max_id_vacancies() - 1
+    i = await max_id_vacancies()
 
     courses = await get_courses_from_db()
 
@@ -97,7 +97,7 @@ async def insert_socre_description(description):
         except Exception as e:
             answer_text_clear = 0
         answer_score = int(answer_text_clear)
-        scores += [(i, j, answer_score)]
+        scores += [(i, j+1, answer_score)]
         time.sleep(0.2)
 
     scores
@@ -115,7 +115,7 @@ async def answer_question(message: types.Message, state: FSMContext):
         msg_bot = 'Идёт обработка ссылки...'
         await message.answer(msg_bot)
         vacancy_url = question
-        scores = await get_scores_from_db(question)
+        scores = await get_scores_from_db(vacancy_url)
     else:
         print('ТЕКСТ!')
         description = question
@@ -144,18 +144,20 @@ async def answer_question(message: types.Message, state: FSMContext):
             msg_bot_answer += f'По десятибальной шкале: {elem[2]}\n\n'
 
     await message.answer(msg_bot_answer)
+    await message.answer('Напишите свой отзыв')
     await save_message_to_db(message.from_id, msg_bot_answer, question)
-    await state.set_state(Diologue.waiting_for_question)
+    await state.set_state(Diologue.waiting_for_question_model_2)
 
-async def answer_question_model_2(message: types.Message, state: FSMContext):
+async def answer_question_2(message: types.Message, state: FSMContext):
     question = message.text
 
     # сохраняем сообщение
     user_data = await state.get_data()
-    msg_bot = user_data.get('msg_bot')
-    scores = get_scores_from_db(question)
-    msg_bot_answer = str(scores)
-    await save_message_to_db(message.from_id, msg_bot_answer, question)
+    msg_bot = 'Напишите свой отзыв'
+
+    await save_message_to_db(message.from_id, msg_bot, question)
+    await message.answer('Спасибо за отзыв вы можете продолжить спрашивать про курсы!')
+    await state.set_state(Diologue.waiting_for_question)
 #
 #     await message.answer('Запрос обрабатывается нашей моделью...')
 #     today = '2024-04-03'
@@ -196,7 +198,7 @@ def register_hendlers_common(dp: Dispatcher, admin_id: int):
     dp.register_message_handler(cmd_start, commands='start', state='*')
     dp.register_message_handler(answer_question, regexp=re.compile(r"^[^/].*"), state=Diologue.waiting_for_question)
     # dp.register_message_handler(hello_answer_question_model_2, commands='start_our_model', state='*')
-    dp.register_message_handler(answer_question_model_2, regexp=re.compile(r"^[^/].*"), state=Diologue.waiting_for_question_model_2)
+    dp.register_message_handler(answer_question_2, regexp=re.compile(r"^[^/].*"), state=Diologue.waiting_for_question_model_2)
     # dp.register_message_handler(model_answer, state=Diologue.answer_for_question)
     # dp.register_message_handler(cmd_cancel, commands='cancel', state='*')
     # dp.register_message_handler(cmd_cancel, Text(equals='отмена', ignore_case=True), state='*')
