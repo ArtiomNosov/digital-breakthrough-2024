@@ -7,11 +7,15 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from ModelGigaChad.model import *
-from model.model import MetroDataExtractor
 
-from app.db.functions import get_passenger_flow_from_db
-from app.db.functions import get_agg_passenger_flow_from_db
 from app.db.functions import save_message_to_db
+from app.db.functions import get_scores_from_db
+from app.db.functions import is_vacancy_description_in_db
+from app.db.functions import get_scores_description_from_db
+from app.db.functions import insert_vacancy_description_to_db
+from app.db.functions import get_courses_from_db
+from app.db.functions import max_id_vacancies
+from app.db.functions import insert_scores_to_db
 
 
 class Diologue(StatesGroup):
@@ -41,15 +45,107 @@ async def cmd_start(message: types.Message, state: FSMContext):
 import datetime
 import json
 
+def get_answer(prompt):
+    answer = get_chat_completion(giga_token, prompt)
+    return answer.json()['choices'][0]['message']['content']
+
+async def insert_socre_description(description):
+    i = await max_id_vacancies() - 1
+
+    courses = await get_courses_from_db()
+
+    def replace_characters(tuple_list, old_char, new_char):
+        replaced_tuples = []
+
+        for tup in tuple_list:
+            replaced_words = []
+            for item in tup:
+                new_word = item.replace(old_char, new_char)
+                replaced_words.append(new_word)
+
+            replaced_tuples.append(tuple(replaced_words))
+
+        return replaced_tuples
+
+    courses = replace_characters(courses, '\n', ' ')
+    courses
+
+    f = lambda x: ' '.join(list(x))
+    courses_text = [f(x) for x in courses]
+    courses_text
+
+    scores = []
+    import time
+
+    prompt = '''
+    Твоя задача оценить по 10 бальной шкале насколько курс закрывает
+    потребность в знаниях для данной вакансии на основании вакансии и курса предоставленных ниже.
+    Формат ответа число в диапазоне от 0 до 10.
+    Вакансия: {}
+    Курc: {}
+    '''
+
+    for j in range(len(courses_text)):
+        x = description
+        y = courses_text[j]
+        prompt_cur = prompt.format(x, y)
+        print(prompt_cur)
+        answer_text = get_answer(prompt_cur)
+        print(f'answer_text: {answer_text}')
+        try:
+            answer_text_clear = re.findall("\d+", answer_text)[0]
+        except Exception as e:
+            answer_text_clear = 0
+        answer_score = int(answer_text_clear)
+        scores += [(i, j, answer_score)]
+        time.sleep(0.2)
+
+    scores
+    await insert_scores_to_db(scores)
+
+
 async def answer_question(message: types.Message, state: FSMContext):
     question = message.text
-    msg_bot = 'Идёт обработка ссылки...'
-    await message.answer(msg_bot)
-    # await state.update_data(msg_bot=msg_bot)
-    msg_bot_answer
-    await save_message_to_db(message.from_id, msg_bot, question)
+    # message.document.mime_type
+    print('Начало answer_question')
+    if message.document:
+        msg_bot = 'Идёт обработка документа...'
+        await message.answer(msg_bot)
+    elif 'http' in question:
+        msg_bot = 'Идёт обработка ссылки...'
+        await message.answer(msg_bot)
+        vacancy_url = question
+        scores = await get_scores_from_db(question)
+    else:
+        print('ТЕКСТ!')
+        description = question
+        msg_bot = 'Идёт обработка текста вакансии...'
+        await message.answer(msg_bot)
+        is_vacancy_description = await is_vacancy_description_in_db(description)
+        if not is_vacancy_description:
+            print('Мы вносим новое описание вакансии!!!')
+            await insert_vacancy_description_to_db(description)
+            await insert_socre_description(description)
+        else:
+            print('В базе уже есть это описание вакансии!!!')
+        scores = await get_scores_description_from_db(description)
 
-    await state.set_state(Diologue.waiting_for_question_model_2.state)
+    print(f'msg_bot: {msg_bot}')
+    print(f'scores: {scores}')
+
+    if not scores:
+        msg_bot_answer = 'К сожалению подходящие курсы не были найдены...\n' \
+                       'Возможно вы найдёте что-то интересно на https://gb.ru/'
+    else:
+        msg_bot_answer = 'Вам подходят следующие курсы!\n\n'
+        for elem in scores:
+            msg_bot_answer += f'{elem[0]}\n'.capitalize()
+            msg_bot_answer += f'Ссылка: {elem[1]}\n'
+            msg_bot_answer += f'По десятибальной шкале: {elem[2]}\n\n'
+
+    await message.answer(msg_bot_answer)
+    await save_message_to_db(message.from_id, msg_bot_answer, question)
+    await state.set_state(Diologue.waiting_for_question)
 
 async def answer_question_model_2(message: types.Message, state: FSMContext):
     question = message.text
@@ -57,7 +153,9 @@ async def answer_question_model_2(message: types.Message, state: FSMContext):
     # сохраняем сообщение
     user_data = await state.get_data()
     msg_bot = user_data.get('msg_bot')
-    await save_message_to_db(message.from_id, msg_bot, question)
+    scores = get_scores_from_db(question)
+    msg_bot_answer = str(scores)
+    await save_message_to_db(message.from_id, msg_bot_answer, question)
 #
 #     await message.answer('Запрос обрабатывается нашей моделью...')
 #     today = '2024-04-03'
@@ -97,7 +195,7 @@ import re
 def register_hendlers_common(dp: Dispatcher, admin_id: int):
     dp.register_message_handler(cmd_start, commands='start', state='*')
     dp.register_message_handler(answer_question, regexp=re.compile(r"^[^/].*"), state=Diologue.waiting_for_question)
-    dp.register_message_handler(hello_answer_question_model_2, commands='start_our_model', state='*')
+    # dp.register_message_handler(hello_answer_question_model_2, commands='start_our_model', state='*')
     dp.register_message_handler(answer_question_model_2, regexp=re.compile(r"^[^/].*"), state=Diologue.waiting_for_question_model_2)
     # dp.register_message_handler(model_answer, state=Diologue.answer_for_question)
     # dp.register_message_handler(cmd_cancel, commands='cancel', state='*')

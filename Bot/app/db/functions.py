@@ -1,6 +1,6 @@
 import sqlite3
 import datetime
-db_name = 'mos_trans_proekt_bot_db.sql'
+db_name = 'match_bot.sql'
 name_max_length = 255
 # TODO REVIEW 20.04.2024
 def create_tables_if_not_exists():
@@ -14,9 +14,20 @@ def create_tables_if_not_exists():
             version integer NOT NULL,
             id_vacancy INTEGER NOT NULL,
             id_course INTEGER NOT NULL,
-            score timestamp NOT NULL);
+            score INTEGER NOT NULL);
             --FOREIGN KEY (chat_conditional_branch_id)  REFERENCES ChatConditionalBranches (id) ON DELETE SET NULL);
             '''
+        )
+        cur.execute(
+            f'''
+                    CREATE TABLE IF NOT EXISTS test_model_match (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    version integer NOT NULL,
+                    id_vacancy INTEGER NOT NULL,
+                    id_course INTEGER NOT NULL,
+                    score INTEGER NOT NULL);
+                    --FOREIGN KEY (chat_conditional_branch_id)  REFERENCES ChatConditionalBranches (id) ON DELETE SET NULL);
+                    '''
         )
         cur.execute(
             f'''
@@ -99,27 +110,175 @@ async def save_message_to_db(user_tg_id,
             conn.close()
             print('Соединение с SQLite закрыто')
 
-async def get_scores_from_db(id_vacancy):
-    print(f'get_passenger_flow_from_db. id_vacancy: {id_vacancy}')
+async def get_scores_from_db(vacancy_url):
+    print(f'get_passenger_flow_from_db. vacancy_url: {vacancy_url}')
     result = None
     try:
         conn = sqlite3.connect(db_name)
         cur = conn.cursor()
         res = cur.execute(
             f'''
-            SELECT id_course, score FROM giga_chad_match
-            WHERE 1=1
-                AND id_vacancy='{id_vacancy}'
-            
-            CREATE TABLE IF NOT EXISTS giga_chad_match (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            version integer NOT NULL,
-            id_vacancy INTEGER NOT NULL,
-            id_course INTEGER NOT NULL,
-            score timestamp NOT NULL);
+SELECT t3.title, t3.url, score
+FROM giga_chad_match t1 JOIN vacancies t2
+ON t1.id_vacancy+1=t2.id
+JOIN courses t3 ON t1.id_course+1=t3.id
+WHERE 1=1
+    AND t1.score > 0
+    AND t2.url='{vacancy_url}'
+ORDER BY t1.score DESC
+LIMIT 5
             '''
         )
-        print(dt)
+        result = res.fetchall()
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print('Ошибка при работе с SQLite', error)
+    finally:
+        if conn:
+            conn.close()
+            # print('Соединение с SQLite закрыто')
+    if result is not None and len(result) > 0:
+        # print(result[0])
+        return result#[0][0]
+    else:
+        return None
+
+async def max_id_vacancies():
+    result = None
+    try:
+        conn = sqlite3.connect(db_name)
+        cur = conn.cursor()
+        res = cur.execute(f'''
+SELECT MAX(id) FROM vacancies
+''')
+        result = res.fetchall()
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print('Ошибка при работе с SQLite', error)
+    finally:
+        if conn:
+            conn.close()
+            # print('Соединение с SQLite закрыто')
+    if result is not None and len(result) > 0:
+        return result[0][0]
+    else:
+        return None
+
+async def insert_scores_to_db(scores):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    for score in scores:
+        version = 1
+        print(score)
+        id_vacancy = score[0]
+        id_course = score[1]
+        score = score[2]
+        print(id_vacancy, id_course, score)
+        cursor.execute(f'''
+                INSERT INTO giga_chad_match (version, id_vacancy, id_course, score)
+                VALUES ('{version}', '{id_vacancy}', '{id_course}', '{score}');
+                ''')
+
+    conn.commit()
+    conn.close()
+async def get_courses_from_db():
+    print(f'get_courses_from_db')
+    result = None
+    try:
+        conn = sqlite3.connect(db_name)
+        cur = conn.cursor()
+        res = cur.execute(
+            f'''
+                SELECT title, skills FROM courses
+                '''
+        )
+        result = res.fetchall()
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print('Ошибка при работе с SQLite', error)
+    finally:
+        if conn:
+            conn.close()
+            # print('Соединение с SQLite закрыто')
+    if result is not None and len(result) > 0:
+        # print(result[0])
+        return result  # [0][0]
+    else:
+        return None
+async def get_scores_description_from_db(description):
+    print(f'get_passenger_flow_from_db. description: {description}')
+    result = None
+    try:
+        conn = sqlite3.connect(db_name)
+        cur = conn.cursor()
+        res = cur.execute(
+            f'''
+SELECT t3.title, t3.url, score
+FROM giga_chad_match t1 JOIN vacancies t2
+ON t1.id_vacancy+1=t2.id
+JOIN courses t3 ON t1.id_course+1=t3.id
+WHERE 1=1
+    AND t1.score > 0
+    AND t2.description='{description}'
+ORDER BY t1.score DESC
+LIMIT 5
+            '''
+        )
+        result = res.fetchall()
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print('Ошибка при работе с SQLite', error)
+    finally:
+        if conn:
+            conn.close()
+            # print('Соединение с SQLite закрыто')
+    if result is not None and len(result) > 0:
+        # print(result[0])
+        return result#[0][0]
+    else:
+        return None
+
+async def insert_vacancy_description_to_db(description):
+    print(f'get_passenger_flow_from_db. description: {description}')
+    result = None
+    try:
+        conn = sqlite3.connect(db_name)
+        cur = conn.cursor()
+        res = cur.execute(
+            f'''
+            INSERT INTO vacancies (title, description, experience, skills, main_requirements, main_text, url)
+            VALUES ('{None}', '{description}', '{None}', '{None}', '{None}', '{None}', '{None}');
+            '''
+        )
+        result = res.fetchall()
+        conn.commit()
+        cur.close()
+    except sqlite3.Error as error:
+        print('Ошибка при работе с SQLite', error)
+    finally:
+        if conn:
+            conn.close()
+            # print('Соединение с SQLite закрыто')
+    if result is not None and len(result) > 0:
+        # print(result[0])
+        return result#[0][0]
+    else:
+        return None
+
+async def is_vacancy_description_in_db(description):
+    print(f'get_passenger_flow_from_db. description: {description}')
+    result = None
+    try:
+        conn = sqlite3.connect(db_name)
+        cur = conn.cursor()
+        res = cur.execute(f'''
+SELECT id FROM main.vacancies WHERE description='{description}'
+''')
         result = res.fetchall()
         conn.commit()
         cur.close()

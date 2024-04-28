@@ -31,7 +31,7 @@ def extract_technologies(content):
 def save_to_database(name, techs, url):
     conn = sqlite3.connect('courses.db')
     cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS vacancies 
+    cursor.execute('''CREATE TABLE IF NOT EXISTS courses 
                       (id INTEGER PRIMARY KEY,
                        title TEXT,
                        skills TEXT,
