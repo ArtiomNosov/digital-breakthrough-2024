@@ -28,6 +28,46 @@ def create_tables_if_not_exists():
 	        msg_user text NOT NULL);
 	        -- FOREIGN KEY (psychological_state_id)  REFERENCES PsychologicalStates (id) ON DELETE SET NULL);
             ''')
+
+        cur.execute(
+            f'''
+                    CREATE TABLE IF NOT EXISTS cosine_similarity(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   id_vacancy INTEGER NOT NULL,
+                    id_course INTEGER NOT NULL,
+                    cosine_similarity FlOAT NOT NULL);
+        	        -- FOREIGN KEY (psychological_state_id)  REFERENCES PsychologicalStates (id) ON DELETE SET NULL);
+                    ''')
+
+        cur.execute(
+            f'''
+                    CREATE TABLE IF NOT EXISTS levenshtein_distance(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   id_vacancy INTEGER NOT NULL,
+                    id_course INTEGER NOT NULL,
+                    levenshtein_distance INTEGER NOT NULL);
+        	        -- FOREIGN KEY (psychological_state_id)  REFERENCES PsychologicalStates (id) ON DELETE SET NULL);
+                    ''')
+
+        cur.execute(
+            f'''
+                    CREATE TABLE IF NOT EXISTS jaccard_coefficient(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   id_vacancy INTEGER NOT NULL,
+                    id_course INTEGER NOT NULL,
+                    jaccard_coefficient FlOAT NOT NULL);
+        	        -- FOREIGN KEY (psychological_state_id)  REFERENCES PsychologicalStates (id) ON DELETE SET NULL);
+                    ''')
+
+        cur.execute(
+            f'''
+                            CREATE TABLE IF NOT EXISTS euclidean_distance(
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                           id_vacancy INTEGER NOT NULL,
+                            id_course INTEGER NOT NULL,
+                            euclidean_distance FlOAT NOT NULL);
+                	        -- FOREIGN KEY (psychological_state_id)  REFERENCES PsychologicalStates (id) ON DELETE SET NULL);
+                            ''')
         # cur.execute(
         #     f'''
         #     CREATE TABLE IF NOT EXISTS PsychologicalStates (
